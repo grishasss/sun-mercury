@@ -25,6 +25,8 @@ void reshape(GLint w, GLint h) {
 
 
 
+
+
 const double degRad = 180. / M_PI;
 
 void  triangle(Vector a , Vector b , Vector c){
