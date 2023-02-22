@@ -35,6 +35,9 @@ public:
 	double abs(){
 		return sqrt(x * x + y * y + z * z);
 	}
+	double sabs(){
+		return x * x + y * y + z * z;
+	}
 
 	void tonormal(){
 		double a = abs();

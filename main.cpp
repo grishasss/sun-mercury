@@ -3,9 +3,17 @@
 #include "Vector.h"
 
 
+#ifdef EXACTLY
+	#define double long double
+#endif
+
 
 using namespace std;
-const int FPS = 60;
+const int FPS = 100; 	// frame per second
+const int CPF = 100000; 	// calc per frame
+
+// of corse FPS * CPF <= 1e8
+
 const double G = 6.67430* 10e-11;
 
 
@@ -38,8 +46,8 @@ void  triangle(Vector a , Vector b , Vector c){
 }
 
 void sphere(double r , bool light = 0){
-  	int cnt1 = 20;
-  	int cnt2 = 20;
+  	int cnt1 = 70;
+  	int cnt2 = 70;
   	vector<vector<Vector>> A(cnt1 + 1 , vector<Vector>(cnt2));
   	for(int i = 0; i <= cnt1; i++){
   		double a = 180. * i / (cnt1);
@@ -55,9 +63,8 @@ void sphere(double r , bool light = 0){
   			a.tonormal();
   			if(!light) a = a * (-1);
   			glNormal3f(a.x , a.y , a.z);
-  			cout << "a: " << a << endl;
   			float u[] = {1 , 1,  1 , 1};
-  			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, u);
+  			// glMaterialfv(GL_BACK, GL_AMBIENT, u);
   			
   			triangle(A[i][j] , A[i + 1][j] , A[i + 1][(j + 1) % cnt2]);
   			// glColor3f(1, 1, 1);
@@ -85,22 +92,44 @@ public:
 Obj sun , mercury;
   	
 
+double post = 0;
 void recalc(Obj &a , Obj &b , double dt){
 	Vector r = b.cord - a.cord;
 	Vector F = r * pow(r.abs() ,  -3) * a.mass * b.mass * G * (-1);
-	b.velocity = b.velocity + F * dt * (1. / b.mass);
-	a.velocity = a.velocity - F * dt * (1. / a.mass);
-	cout << b.cord << endl;
+	b.velocity = b.velocity + F * (dt / b.mass);
+	a.velocity = a.velocity - F * (dt / a.mass);
 	b.cord =  b.cord + b.velocity * dt;
 	a.cord =  a.cord + a.velocity * dt;
+
+	
+	post = clock();
+}
+
+double calcEng(vector<Obj> a){
+	double Eng = 0;
+	
+	for(int i = 0; i < a.size() ; i++){
+		Eng += a[i].mass / 2 * a[i].velocity.sabs();
+		for(int j = 0; j < i; j++){
+			Eng += -G * a[i].mass * a[j].mass / (a[j].cord - a[i].cord).abs(); 
+		}
+	}
+	return Eng;
 }
 
 void display() {
+	cout << "time between frame: "<< (clock() - post) / CLOCKS_PER_SEC << endl; 	
   	glClear(GL_COLOR_BUFFER_BIT);
  	// glMatrixMode(GL_PROJECTION);
   	glLoadIdentity();
   	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   	
+  	for(int iter = 0; iter < CPF ; iter++){
+  		recalc(sun , mercury , 0.1);
+  	}
+
+  	cout << calcEng({sun , mercury}) << endl;
+
 
   	glEnable(GL_LIGHTING);
   	glEnable(GL_LIGHT0);
@@ -108,7 +137,7 @@ void display() {
 
   	glEnable(GL_DEPTH_TEST);
  
-  	glRotatef(45 ,1, 0 , 0);
+  	glRotatef(70 ,1, 0 , 0);
 
   	double scale  = 1 / 1.496e11;
   	// glScalef(scale , scale , 1);
@@ -121,12 +150,12 @@ void display() {
   	sphere(0.2 , 1);
   	
   	glLoadIdentity();
-  	glRotatef(45 , 1 , 0 , 0);
+  	glRotatef(70 , 1 , 0 , 0);
 
   	glTranslatef(mercury.cord.x * scale ,  mercury.cord.y * scale , 0);
   	glColor3f(255 / 255., 178/ 255., 102 / 255.);
   	
-  	sphere(0.1 );
+  	sphere(0.07 );
   	
   	// glFlush();
   	glutSwapBuffers();
@@ -134,14 +163,11 @@ void display() {
 
 
 
-void timer(int v) {
-	
-	recalc(sun , mercury , 10000 / 2);
-
+void Trender(int v) {
 	glutPostRedisplay();
-  
-  	glutTimerFunc(1000/FPS, timer, v);
+  	glutTimerFunc(1000./FPS, Trender, 0);
 }
+
 
 
 void mouse (int button, int state, int x, int y) {
@@ -167,6 +193,6 @@ signed main(int argc, char** argv) {
   	glutMouseFunc(mouse);
 
   	glutDisplayFunc(display);
-  	glutTimerFunc(100, timer, 0);
+  	glutTimerFunc(1000. / FPS, Trender, 0);
   	glutMainLoop();
 }
